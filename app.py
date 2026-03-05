@@ -45,23 +45,20 @@ def main():
 
     db.init_db()
 
+    # ── Leer API key desde secrets ──────────────────────────────────
+    api_key = ""
+    try:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        pass
+
+    if not api_key:
+        st.error("No se encontró la API Key. Configúrala en los Secrets de Streamlit Cloud.")
+        st.stop()
+
     # ── Barra lateral ──────────────────────────────────────────────
     with st.sidebar:
         st.header("Configuración")
-
-        # Leer API key desde secrets (Streamlit Cloud) o input manual
-        default_key = ""
-        try:
-            default_key = st.secrets["GOOGLE_API_KEY"]
-        except (KeyError, FileNotFoundError):
-            pass
-
-        api_key = st.text_input(
-            "API Key de Google Gemini",
-            value=default_key,
-            type="password",
-            help="Obtén tu clave gratis en https://aistudio.google.com",
-        )
 
         modelo = st.selectbox(
             "Modelo de Gemini",
@@ -126,24 +123,21 @@ def main():
 
     # Botón de extracción
     if st.button("Extraer datos de la imagen", type="primary", use_container_width=True):
-        if not api_key:
-            st.error("Introduce tu API Key de Google Gemini en la barra lateral.")
-        else:
-            with st.spinner("Analizando imagen… esto puede tardar unos segundos"):
-                try:
-                    data = extract_directory(image, api_key, model_name=modelo)
-                    st.session_state["extracted_data"] = data
-                    st.success(f"Se encontraron {len(data)} registros.")
-                except Exception as exc:
-                    msg = str(exc)
-                    if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
-                        st.error(
-                            "Cuota agotada para este modelo. "
-                            "Prueba seleccionando otro modelo en la barra lateral, "
-                            "o espera un minuto e inténtalo de nuevo."
-                        )
-                    else:
-                        st.error(f"Error al extraer datos: {exc}")
+        with st.spinner("Analizando imagen… esto puede tardar unos segundos"):
+            try:
+                data = extract_directory(image, api_key, model_name=modelo)
+                st.session_state["extracted_data"] = data
+                st.success(f"Se encontraron {len(data)} registros.")
+            except Exception as exc:
+                msg = str(exc)
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                    st.error(
+                        "Cuota agotada para este modelo. "
+                        "Prueba seleccionando otro modelo en la barra lateral, "
+                        "o espera un minuto e inténtalo de nuevo."
+                    )
+                else:
+                    st.error(f"Error al extraer datos: {exc}")
 
     # Paso 2 — Revisar
     if "extracted_data" not in st.session_state:
