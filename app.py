@@ -49,7 +49,7 @@ def main():
     api_key = ""
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
-    except (KeyError, FileNotFoundError):
+    except Exception:
         pass
 
     if not api_key:
